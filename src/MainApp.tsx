@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppMap from './components/Map';
 import Splash from './components/Splash';
@@ -31,7 +31,6 @@ export default function MainApp() {
   // Data
   const [bins, setBins] = useState<Bin[]>([]);
   const [requests, setRequests] = useState<BinRequest[]>([]);
-  const [filterDist, setFilterDist] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState('');
   
   // UI Sheets
@@ -149,12 +148,8 @@ export default function MainApp() {
       list = list.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()) || (b.notes && b.notes.toLowerCase().includes(searchQuery.toLowerCase())));
     }
     
-    if (filterDist > 0 && userLoc) {
-      list = list.filter(b => getDistance(userLoc[0], userLoc[1], b.lat, b.lng) <= filterDist);
-    }
-    
     return list;
-  }, [bins, searchQuery, filterDist, userLoc]);
+  }, [bins, searchQuery, userLoc]);
 
   const nearestBinInfo = useMemo(() => {
     if (!userLoc || bins.length === 0) return undefined;
@@ -219,6 +214,8 @@ export default function MainApp() {
           <BottomBar 
             onListClick={() => setIsBinList(true)}
             stats={stats}
+            activeFilter={0}
+            onFilterChange={() => {}}
           />
 
           {isBinList && (

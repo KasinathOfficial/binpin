@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Star, MessageSquare } from 'lucide-react';
+import { X, Star } from 'lucide-react';
 import { databases, client } from '../lib/appwrite';
 import type { Feedback } from '../lib/appwrite';
 import { Query } from 'appwrite';

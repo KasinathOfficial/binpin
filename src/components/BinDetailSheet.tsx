@@ -17,7 +17,7 @@ interface BinDetailSheetProps {
   onReport: () => void;
 }
 
-export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, onReport }: BinDetailSheetProps) {
+export default function BinDetailSheet({ bin, userLocation: _userLocation, onClose, onHelpful, onReport }: BinDetailSheetProps) {
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
   

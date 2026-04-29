@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, MapPin, ThumbsUp, AlertTriangle, ArrowUpDown, Info } from 'lucide-react';
+import { X, MapPin, ThumbsUp, AlertTriangle, Info } from 'lucide-react';
 import type { Bin } from '../lib/appwrite';
 import { formatDistance, getDistance } from '../lib/geo';
 

@@ -2,11 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   ChevronLeft, 
   Search, 
-  Filter, 
   Clock, 
   TrendingUp, 
   CheckCircle2, 
-  AlertCircle, 
   MapPin,
   ChevronRight,
   ExternalLink,

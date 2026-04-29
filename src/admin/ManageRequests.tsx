@@ -3,7 +3,7 @@ import { databases, storage, ID } from '../lib/appwrite';
 import type { BinRequest } from '../lib/appwrite';
 import { Query } from 'appwrite';
 import AdminLayout from './AdminLayout';
-import { Search, CheckCircle, Clock, AlertCircle, Trash2, Edit, ChevronDown, Check, Eye } from 'lucide-react';
+import { Search, CheckCircle, Clock, AlertCircle, Trash2, ChevronDown, Check, Eye } from 'lucide-react';
 
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const requestsId = import.meta.env.VITE_APPWRITE_REQUESTS_COLLECTION_ID;

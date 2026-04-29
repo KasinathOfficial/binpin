@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { account } from '../lib/appwrite';
-import { LayoutDashboard, Trash2, MapPin, MessageSquare, Heart, CheckSquare, LogOut, Shield, Menu, X } from 'lucide-react';
+import { LayoutDashboard, MapPin, MessageSquare, Heart, CheckSquare, LogOut, Shield, Menu, X } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;

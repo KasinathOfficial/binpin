@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Search, Filter, AlertCircle, CheckCircle2, Clock, MapPin, Image as ImageIcon, Camera, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, Search, Filter, AlertCircle, CheckCircle2, Clock, Shield, Image as ImageIcon, Camera, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { databases, storage, ID } from '../lib/appwrite';
 import type { BinRequest, MunicipalAction } from '../lib/appwrite';

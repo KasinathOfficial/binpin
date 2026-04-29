@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Building, Camera, Check, ChevronLeft } from 'lucide-react';
-import { databases, client, ID } from '../lib/appwrite';
+import { databases, ID } from '../lib/appwrite';
 import type { BinRequest } from '../lib/appwrite';
 
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;

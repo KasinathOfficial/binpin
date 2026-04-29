@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { Plus, MapPin, AlertCircle, Shield, Menu, X, Trash2 } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface FloatingElementsProps {
-  onAddClick: () => void;
+  onAddClick?: () => void;
   onRequestClick?: () => void;
   onMunicipalClick?: () => void;
   nearestBin?: {
