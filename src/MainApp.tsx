@@ -11,6 +11,7 @@ import FeedbackSheet from './components/FeedbackSheet';
 import BinListSheet from './components/BinListSheet';
 import RequestBinSheet from './components/RequestBinSheet';
 import RequestDetailSheet from './components/RequestDetailSheet';
+import InstallBanner from './components/InstallBanner';
 import { databases, client, ID } from './lib/appwrite';
 import type { Bin, BinRequest } from './lib/appwrite';
 import { Query } from 'appwrite';
@@ -183,6 +184,9 @@ export default function MainApp() {
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-background">
       {showSplash && <Splash onStart={handleStart} />}
+
+      {/* PWA Install Banner - always rendered so it shows on every refresh */}
+      <InstallBanner />
 
       {!showSplash && (
         <>

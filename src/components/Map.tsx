@@ -28,32 +28,33 @@ const createUserIcon = () => L.divIcon({
   iconAnchor: [20, 20]
 });
 
-const createBinIcon = (type: string, isReported: boolean = false) => {
-  let dotColor = '#1E8A4A'; // General (Green primary)
-  let svgPaths = '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>';
-  
-  if (type === 'organic') {
-    dotColor = '#F29900'; // Orange
-    svgPaths = '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>';
-  } else if (type === 'medical') {
-    dotColor = '#D93025'; // Red
-    svgPaths = '<path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/>';
-  } else if (type === 'recyclable') {
-    dotColor = '#1967D2'; // Blue
-    svgPaths = '<path d="M7 15.3l-2.6 4.7c-.2.4.2.8.6.6l4.6-2"/><path d="M11 16.5A6.9 6.9 0 0 0 17 21a6.9 6.9 0 0 0 5-2.2"/><path d="M17 8.7l2.6-4.7c.2-.4-.2-.8-.6-.6l-4.6 2"/><path d="M13 7.5A6.9 6.9 0 0 0 7 3a6.9 6.9 0 0 0-5 2.2"/><path d="M11 11H3.6a.4.4 0 0 0-.4.3l.5.2 3.8 2.3A4.2 4.2 0 0 1 11 11z"/>';
+const getBinTypeAccent = (type: string) => {
+  switch (type) {
+    case 'organic':    return { ring: '#F29900', label: 'ORG' };
+    case 'medical':    return { ring: '#D93025', label: 'MED' };
+    case 'recyclable': return { ring: '#1967D2', label: 'RCY' };
+    default:           return { ring: '#1E8A4A', label: 'GEN' };
   }
-  
+};
+
+const createBinIcon = (type: string, isReported: boolean = false) => {
+  const { ring, label } = getBinTypeAccent(type);
+  const binSvg = `<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>`;
+
   return L.divIcon({
     className: 'bg-transparent border-none focus:outline-none focus:ring-0 marker-transition',
     html: `
-      <div class="hover:scale-110 active:scale-95 transition-transform duration-200 ease-out origin-bottom w-8 h-8 bg-white shadow-medium rounded-full flex items-center justify-center border-2 border-transparent hover:border-primary/20 ${isReported ? 'grayscale opacity-50' : ''}">
-        <div style="background-color: ${dotColor}" class="w-5 h-5 rounded-full flex items-center justify-center shadow-inner">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${svgPaths}</svg>
+      <div style="filter: drop-shadow(0 2px 6px rgba(30,138,74,0.45))" class="${isReported ? 'opacity-40 grayscale' : ''} hover:scale-110 active:scale-95 transition-transform duration-200 ease-out origin-bottom relative">
+        <!-- Green circle body -->
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#28c76f,#1E8A4A);border:3px solid #fff;box-shadow:0 0 0 2px ${ring};display:flex;align-items:center;justify-content:center;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${binSvg}</svg>
         </div>
+        <!-- Type label badge -->
+        <div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);background:${ring};color:#fff;font-size:7px;font-weight:900;padding:1px 4px;border-radius:3px;white-space:nowrap;border:1px solid rgba(255,255,255,0.5);letter-spacing:0.05em;">${label}</div>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
+    iconSize: [36, 48],
+    iconAnchor: [18, 48]
   });
 };
 
@@ -80,10 +81,11 @@ export default function AppMap({ userLocation, bins, requests = [], onBinClick, 
   const center = userLocation || defaultCenter;
 
   const createClusterCustomIcon = function (cluster: any) {
+    const count = cluster.getChildCount();
     return L.divIcon({
-      html: `<div class="w-10 h-10 bg-white rounded-full flex items-center justify-center border-[3px] border-primary text-foreground font-semibold shadow-medium hover:scale-105 transition-transform duration-200 cursor-pointer"><span>${cluster.getChildCount()}</span></div>`,
+      html: `<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#28c76f,#1E8A4A);border:3px solid #fff;box-shadow:0 0 0 2px #1E8A4A,0 4px 12px rgba(30,138,74,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:900;font-size:13px;color:#fff;font-family:inherit;transition:transform 0.2s;">${count}</div>`,
       className: 'bg-transparent border-none',
-      iconSize: L.point(40, 40, true),
+      iconSize: L.point(44, 44, true),
     });
   };
 
