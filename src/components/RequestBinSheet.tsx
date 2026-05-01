@@ -28,6 +28,7 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [step, setStep] = useState<1 | 2>(1); // 1: Map, 2: Details
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,6 +56,7 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => setPhotoPreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -157,7 +159,7 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
             </div>
 
             <button 
-              onClick={() => onSubmit({ lat: selectedLoc?.[0], lng: selectedLoc?.[1], address, description, photo: photoPreview, city: cityData })}
+              onClick={() => onSubmit({ lat: selectedLoc?.[0], lng: selectedLoc?.[1], address, description, photo: photoFile, city: cityData })}
               disabled={!description.trim() || !cityData || !address.trim()}
               className="w-full h-12 bg-orange hover:bg-orange/90 disabled:opacity-50 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 transition-all active:scale-95"
             >

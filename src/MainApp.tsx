@@ -12,22 +12,38 @@ import BinListSheet from './components/BinListSheet';
 import RequestBinSheet from './components/RequestBinSheet';
 import RequestDetailSheet from './components/RequestDetailSheet';
 import InstallBanner from './components/InstallBanner';
-import { databases, client, ID } from './lib/appwrite';
+import { databases, storage, client, ID } from './lib/appwrite';
 import type { Bin, BinRequest } from './lib/appwrite';
 import { Query } from 'appwrite';
+import { getDistance, formatDistance } from './lib/geo';
 
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const binsId = import.meta.env.VITE_APPWRITE_BINS_COLLECTION_ID;
 const feedbackId = import.meta.env.VITE_APPWRITE_FEEDBACK_COLLECTION_ID;
 const reportsId = import.meta.env.VITE_APPWRITE_REPORTS_COLLECTION_ID;
 const reqsId = import.meta.env.VITE_APPWRITE_REQUESTS_COLLECTION_ID;
-import { getDistance, formatDistance } from './lib/geo';
+const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
+
+/** Upload a File to Appwrite Storage, return the CDN view URL or null on failure */
+async function uploadPhoto(file: File): Promise<string | null> {
+  if (!bucketId) return null;
+  try {
+    const uploaded = await storage.createFile(bucketId, ID.unique(), file);
+    // Build the public view URL
+    const endpoint = 'https://sgp.cloud.appwrite.io/v1';
+    const projectId = '69ed94eb0033f1ed70e4';
+    return `${endpoint}/storage/buckets/${bucketId}/files/${uploaded.$id}/view?project=${projectId}`;
+  } catch (e) {
+    console.warn('Photo upload failed, continuing without photo:', e);
+    return null;
+  }
+}
 
 export default function MainApp() {
   const navigate = useNavigate();
   const [showSplash, setShowSplash] = useState(true);
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
-  const [mapTheme, setMapTheme] = useState<'light' | 'dark'>('dark');
+  const [mapTheme, setMapTheme] = useState<'light' | 'dark'>('light');
   
   // Data
   const [bins, setBins] = useState<Bin[]>([]);
@@ -90,6 +106,26 @@ export default function MainApp() {
     }
   }, []);
 
+  // Request location immediately on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      // Initial low accuracy fix
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
+        null,
+        { enableHighAccuracy: false, timeout: 10000 }
+      );
+
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
+        (err) => console.warn('Loc error', err),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 60000 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, []);
+
   const fetchRequests = async () => {
     if(!dbId || !reqsId) return;
     try {
@@ -114,31 +150,6 @@ export default function MainApp() {
 
   const handleStart = () => {
     setShowSplash(false);
-    if (navigator.geolocation) {
-      // Get an initial position quickly (low accuracy)
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
-        null,
-        { enableHighAccuracy: false, timeout: 5000 }
-      );
-
-      // Start high-accuracy tracking with robust timeout handling
-      navigator.geolocation.watchPosition(
-        (pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
-        (err) => {
-          if (err.code === err.TIMEOUT) {
-            console.warn('GPS signal acquisition taking longer than expected... will keep trying.');
-          } else {
-            console.warn('High-accuracy loc error', err);
-          }
-        },
-        { 
-          enableHighAccuracy: true, 
-          maximumAge: 0, 
-          timeout: 60000 // 1 minute timeout for high-accuracy cold starts
-        }
-      );
-    }
   };
 
   // Derived state
@@ -167,8 +178,12 @@ export default function MainApp() {
   const stats = useMemo(() => {
     const citySet = new Set<string>();
     bins.forEach(b => {
-      const city = b.name.split(',').pop()?.trim();
-      if (city) citySet.add(city);
+      if (b.city) citySet.add(b.city);
+      else {
+        // Fallback for legacy data
+        const city = b.name.split(',').pop()?.trim();
+        if (city) citySet.add(city);
+      }
     });
     requests.forEach(r => {
       if (r.city) citySet.add(r.city);
@@ -274,12 +289,21 @@ export default function MainApp() {
           )}
 
           {isAdding && (
-            <AddBinSheet 
+            <AddBinSheet
               userLocation={userLoc}
               onClose={() => setIsAdding(false)}
               onSubmit={async (data) => {
-                if(dbId && binsId) {
-                   await databases.createDocument(dbId, binsId, ID.unique(), data);
+                if (dbId && binsId) {
+                  const { photoFile, photo: _photo, ...rest } = data;
+                  // Upload photo to Appwrite Storage if provided
+                  const photo_url = photoFile ? await uploadPhoto(photoFile) : null;
+                  await databases.createDocument(dbId, binsId, ID.unique(), {
+                    ...rest,
+                    photo_url,
+                    upvote_count: 0,
+                    report_count: 0,
+                    is_deleted: false,
+                  });
                 }
                 setIsAdding(false);
               }}
@@ -287,17 +311,21 @@ export default function MainApp() {
           )}
 
           {isRequesting && (
-            <RequestBinSheet 
+            <RequestBinSheet
               userLocation={userLoc}
               onClose={() => setIsRequesting(false)}
               onSubmit={async (data) => {
-                if(dbId && reqsId) {
-                   await databases.createDocument(dbId, reqsId, ID.unique(), {
-                     ...data,
-                     status: 'requested',
-                     upvote_count: 1
-                   });
-                   alert('Request submitted for municipal review.');
+                if (dbId && reqsId) {
+                  const { photo: photoFile, ...rest } = data;
+                  // Upload proof photo if provided
+                  const photo_url = (photoFile && typeof photoFile !== 'string') ? await uploadPhoto(photoFile) : null;
+                  await databases.createDocument(dbId, reqsId, ID.unique(), {
+                    ...rest,
+                    photo_url,
+                    status: 'requested',
+                    upvote_count: 1,
+                  });
+                  alert('Request submitted for municipal review.');
                 }
                 setIsRequesting(false);
               }}

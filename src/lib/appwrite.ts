@@ -18,6 +18,7 @@ export interface Bin {
   type: BinType;
   lat: number;
   lng: number;
+  city?: string | null;
   photo_url: string | null;
   notes: string | null;
   upvote_count: number;

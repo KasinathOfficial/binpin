@@ -33,6 +33,7 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
   const [type, setType] = useState<BinType>('general');
   const [notes, setNotes] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,6 +68,7 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => setPhotoPreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -81,7 +83,7 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
       city: cityData,
       lat: selectedLoc?.[0] || userLocation?.[0],
       lng: selectedLoc?.[1] || userLocation?.[1],
-      photo: photoPreview // Base64 handling would actually be multipart upload in Appwrite, but passed to parent for logic.
+      photoFile // Pass the actual File object for Appwrite Storage upload
     });
   };
 

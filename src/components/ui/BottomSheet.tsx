@@ -6,7 +6,7 @@ interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   children: ReactNode;
-  height?: 'auto' | '65%' | '80%' | '92%';
+  height?: 'auto' | '65%' | '72%' | '80%' | '92%';
   title?: string;
   accentBorder?: boolean;
 }
@@ -15,6 +15,7 @@ export default function BottomSheet({ isOpen, onClose, children, height = 'auto'
   const heightClasses = {
     'auto': 'h-auto max-h-[92dvh]',
     '65%': 'h-[65dvh]',
+    '72%': 'h-[72dvh]',
     '80%': 'h-[80dvh]',
     '92%': 'h-[92dvh]'
   };

@@ -24,21 +24,31 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
-  // Real-time subscription for bins to keep count live
+  // Comprehensive real-time subscription for all stats
   useEffect(() => {
-    if (!dbId || !binsId) return;
+    if (!dbId || !binsId || !commentsId || !feedbackId || !viewsId) return;
 
-    const timer = setTimeout(() => {
-      const channel = `databases.${dbId}.collections.${binsId}.documents`;
-      const unsub = client.subscribe(channel, (response) => {
-        const payload = response.payload as any;
-        const id = payload.$id;
+    const channels = [
+      `databases.${dbId}.collections.${binsId}.documents`,
+      `databases.${dbId}.collections.${commentsId}.documents`,
+      `databases.${dbId}.collections.${feedbackId}.documents`,
+      `databases.${dbId}.collections.${viewsId}.documents`
+    ];
+
+    const unsub = client.subscribe(channels, (response) => {
+      const payload = response.payload as any;
+      const id = payload.$id;
+      const isBin = response.channels.some(c => c.includes(binsId));
+      const isComment = response.channels.some(c => c.includes(commentsId));
+      const isFeedback = response.channels.some(c => c.includes(feedbackId));
+      const isView = response.channels.some(c => c.includes(viewsId));
+
+      // Pulse live indicator
+      setLiveIndicator(true);
+      setTimeout(() => setLiveIndicator(false), 2000);
+
+      if (isBin) {
         const mappedBin = { ...payload, id, created_at: payload.$createdAt } as unknown as Bin;
-
-        // Pulse live indicator
-        setLiveIndicator(true);
-        setTimeout(() => setLiveIndicator(false), 2000);
-
         if (response.events.includes('databases.*.collections.*.documents.*.create')) {
           setBins(prev => [mappedBin, ...prev]);
         } else if (response.events.includes('databases.*.collections.*.documents.*.update')) {
@@ -46,11 +56,22 @@ export default function AdminDashboard() {
         } else if (response.events.includes('databases.*.collections.*.documents.*.delete')) {
           setBins(prev => prev.filter(b => b.id !== id));
         }
-      });
-      return () => unsub();
-    }, 600);
+      } else if (isComment) {
+        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+          setComments(prev => [{ ...payload, id, created_at: payload.$createdAt } as unknown as Comment, ...prev]);
+        }
+      } else if (isFeedback) {
+        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+          setFeedback(prev => [{ ...payload, id, created_at: payload.$createdAt } as unknown as Feedback, ...prev]);
+        }
+      } else if (isView) {
+        if (response.events.includes('databases.*.collections.*.documents.*.create')) {
+          setViews(prev => [{ ...payload, id, created_at: payload.$createdAt } as unknown as PageView, ...prev]);
+        }
+      }
+    });
 
-    return () => clearTimeout(timer);
+    return () => unsub();
   }, []);
 
   const fetchData = async () => {
