@@ -1,7 +1,8 @@
-import { ThumbsUp, MapPin, Building, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { ThumbsUp, MapPin, Building, CheckCircle2, Clock, AlertCircle, Check } from 'lucide-react';
 import type { BinRequest } from '../lib/appwrite';
 import BottomSheet from './ui/BottomSheet';
 import { formatDistanceToNow } from 'date-fns';
+import { hasUpvotedRequest } from '../lib/votes';
 
 interface RequestDetailSheetProps {
   request: BinRequest;
@@ -13,6 +14,7 @@ interface RequestDetailSheetProps {
 export default function RequestDetailSheet({ request, onClose, onUpvote, onMunicipalAction }: RequestDetailSheetProps) {
   const statuses = ['requested', 'under_review', 'action_taken', 'installed'];
   const currentStatusIndex = statuses.indexOf(request.status);
+  const votted = hasUpvotedRequest(request.id);
 
   return (
     <BottomSheet isOpen={true} onClose={onClose} height="80%" title="Public Bin Request" accentBorder>
@@ -26,7 +28,7 @@ export default function RequestDetailSheet({ request, onClose, onUpvote, onMunic
             <div className="absolute top-3 left-4 h-[2px] bg-orange transition-all duration-500 -z-10" style={{ width: ((currentStatusIndex / 3) * 100) + '%' }} />
             
             {[
-              { id: 'requested', label: 'Requested', icon: AlertCircle },
+              { id: 'requested', label: 'Pending', icon: AlertCircle },
               { id: 'under_review', label: 'Reviewed', icon: Clock },
               { id: 'action_taken', label: 'Action', icon: Building },
               { id: 'installed', label: 'Installed', icon: CheckCircle2 }
@@ -49,16 +51,21 @@ export default function RequestDetailSheet({ request, onClose, onUpvote, onMunic
 
         {/* Info */}
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <MapPin className="w-5 h-5 text-orange" />
-            <h2 className="text-xl font-bold text-foreground">{request.city || 'Unknown Location'}</h2>
+            <h2 className="text-xl font-bold text-foreground">{request.city || 'Regional Area'}</h2>
           </div>
+          {request.address && (
+            <p className="text-[11px] text-foreground-muted font-medium mb-3 ml-7">
+              {request.address}
+            </p>
+          )}
           <p className="text-xs text-foreground-muted uppercase tracking-widest mb-4">
             Opened {request.created_at ? formatDistanceToNow(new Date(request.created_at), { addSuffix: true }) : 'Recently'}
           </p>
 
-          <div className="p-4 bg-orange-light/50 border border-orange/20 rounded-xl mb-4">
-            <p className="text-sm text-foreground font-medium italic leading-relaxed">
+          <div className="p-4 bg-orange-light/50 border border-orange/20 rounded-xl mb-4 shadow-inner">
+            <p className="text-sm text-foreground font-bold italic leading-relaxed">
               "{request.description}"
             </p>
           </div>
@@ -73,10 +80,15 @@ export default function RequestDetailSheet({ request, onClose, onUpvote, onMunic
         {/* Escalate / Upvote */}
         <button 
           onClick={onUpvote}
-          className="w-full bg-white border-[2px] border-orange hover:bg-orange-light text-orange font-bold py-4 rounded-xl shadow-sm hover:shadow-medium flex items-center justify-center gap-2 active:scale-95 transition-all mb-4"
+          disabled={votted}
+          className={`w-full font-bold py-4 rounded-xl shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all mb-4 ${
+            votted 
+            ? 'bg-orange/10 text-orange border border-orange/20 cursor-default' 
+            : 'bg-white border-[2px] border-orange text-orange hover:bg-orange-light hover:shadow-medium'
+          }`}
         >
-          <ThumbsUp className="w-5 h-5" />
-          Escalate to Municipality ({request.upvote_count} votes)
+          {votted ? <Check className="w-5 h-5" /> : <ThumbsUp className="w-5 h-5" />}
+          {votted ? 'Escalated to Municipality' : 'Escalate to Municipality'} ({request.upvote_count} votes)
         </button>
 
         {request.status !== 'installed' && (

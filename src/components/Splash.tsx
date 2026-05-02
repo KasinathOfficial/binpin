@@ -24,7 +24,7 @@ export default function Splash({ onStart }: SplashProps) {
       
       <div className="pb-8">
         <p className="text-xs text-muted-foreground font-medium tracking-wide">
-          Anonymous · Free · Open Source
+          Anonymous · Free · Community Driven
         </p>
       </div>
     </div>

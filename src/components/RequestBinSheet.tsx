@@ -12,9 +12,21 @@ interface RequestBinSheetProps {
 
 const requestIcon = L.divIcon({
   className: 'bg-transparent border-none',
-  html: `<div class="w-10 h-10 border-[3px] border-orange border-dashed rounded-full bg-orange-light shadow-medium flex items-center justify-center animate-pulse"><div class="w-4 h-4 bg-orange rounded-full"></div></div>`,
-  iconSize: [40, 40],
-  iconAnchor: [20, 20]
+  html: `
+    <div class="relative flex flex-col items-center">
+      <!-- Precision Crosshair Circle -->
+      <div class="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-orange shadow-strong">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+      <!-- Sharp Precision Point -->
+      <div class="w-0.5 h-6 bg-orange shadow-sm -mt-0.5"></div>
+      <div class="w-1.5 h-1.5 bg-orange rounded-full -mt-0.5 shadow-subtle border border-white"></div>
+    </div>
+  `,
+  iconSize: [32, 48],
+  iconAnchor: [16, 48]
 });
 
 function MapClicker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
@@ -29,6 +41,7 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
   const [description, setDescription] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<1 | 2>(1); // 1: Map, 2: Details
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,10 +154,10 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
             <div>
               <label className="block text-sm font-bold text-foreground mb-2">Proof Photo (Recommended)</label>
               <div className="w-full relative">
-                <input type="file" accept="image/*" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
+                <input type="file" accept="image/jpeg, image/png" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
                 {photoPreview ? (
                   <div className="w-full h-32 rounded-lg overflow-hidden border border-border relative">
-                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={photoPreview} alt="Preview" className="w-full h-full object-contain bg-black/5" />
                     <button onClick={() => fileInputRef.current?.click()} className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1 rounded-md text-xs font-semibold backdrop-blur-md">
                       Change
                     </button>
@@ -159,11 +172,15 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
             </div>
 
             <button 
-              onClick={() => onSubmit({ lat: selectedLoc?.[0], lng: selectedLoc?.[1], address, description, photo: photoFile, city: cityData })}
-              disabled={!description.trim() || !cityData || !address.trim()}
+              onClick={async () => {
+                setIsSubmitting(true);
+                await onSubmit({ lat: selectedLoc?.[0], lng: selectedLoc?.[1], address, description, photoFile, city: cityData });
+                // isSubmitting will stay true until sheet is unmounted
+              }}
+              disabled={isSubmitting || !description.trim() || !cityData || !address.trim()}
               className="w-full h-12 bg-orange hover:bg-orange/90 disabled:opacity-50 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 transition-all active:scale-95"
             >
-              Create Public Request <Check className="w-5 h-5 -mr-1" />
+              {isSubmitting ? 'Submitting...' : 'Create Public Request'} <Check className="w-5 h-5 -mr-1" />
             </button>
           </div>
         )}

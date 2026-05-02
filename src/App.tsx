@@ -26,7 +26,6 @@ function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/bins" element={<ManageBins />} />
         <Route path="/admin/requests" element={<ManageRequests />} />
-        <Route path="/admin/comments" element={<ManageFeedback />} />
         <Route path="/admin/feedback" element={<ManageFeedback />} />
 
         <Route path="/submit-action/:id" element={<SubmitAction />} />

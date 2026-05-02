@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Camera, MapPin, ChevronRight, Check } from 'lucide-react';
-import type { BinType } from '../lib/appwrite';
+import type { BinType, Bin } from '../lib/appwrite';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import BottomSheet from './ui/BottomSheet';
@@ -9,13 +9,26 @@ interface AddBinSheetProps {
   onClose: () => void;
   userLocation: [number, number] | null;
   onSubmit: (data: any) => void;
+  initialData?: Partial<Bin>;
 }
 
 const addIcon = L.divIcon({
   className: 'bg-transparent border-none',
-  html: `<div class="w-10 h-10 bg-white shadow-strong rounded-full flex items-center justify-center border-[3px] border-primary"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E8A4A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40]
+  html: `
+    <div class="relative flex flex-col items-center">
+      <!-- Precision Crosshair Circle -->
+      <div class="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-primary shadow-strong">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E8A4A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+      <!-- Sharp Precision Point -->
+      <div class="w-0.5 h-6 bg-primary shadow-sm -mt-0.5"></div>
+      <div class="w-1.5 h-1.5 bg-primary rounded-full -mt-0.5 shadow-subtle border border-white"></div>
+    </div>
+  `,
+  iconSize: [32, 48],
+  iconAnchor: [16, 48]
 });
 
 function MapClicker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
@@ -23,16 +36,19 @@ function MapClicker({ onLocationSelect }: { onLocationSelect: (lat: number, lng:
   return null;
 }
 
-export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinSheetProps) {
+export default function AddBinSheet({ onClose, userLocation, onSubmit, initialData }: AddBinSheetProps) {
   const [step, setStep] = useState(1);
-  const [selectedLoc, setSelectedLoc] = useState<[number, number] | null>(null);
-  const [cityData, setCityData] = useState<string>('Unknown City');
+  const [selectedLoc, setSelectedLoc] = useState<[number, number] | null>(
+    initialData?.lat ? [initialData.lat, initialData.lng] : null
+  );
+  const [cityData, setCityData] = useState<string>(initialData?.city || 'Unknown City');
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [label, setLabel] = useState('');
-  const [type, setType] = useState<BinType>('general');
-  const [notes, setNotes] = useState('');
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [label, setLabel] = useState(initialData?.name || '');
+  const [type, setType] = useState<BinType>(initialData?.type || 'general');
+  const [notes, setNotes] = useState(initialData?.notes || '');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initialData?.photo_url || null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,8 +91,9 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
     }
   };
 
-  const handleSubmit = () => {
-    onSubmit({
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    await onSubmit({
       name: label.trim() || 'Anonymous Bin',
       type,
       notes,
@@ -85,6 +102,7 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
       lng: selectedLoc?.[1] || userLocation?.[1],
       photoFile // Pass the actual File object for Appwrite Storage upload
     });
+    // isSubmitting is reset by the sheet closing in MainApp
   };
 
   const centerLoc = selectedLoc || userLocation || [20.5937, 78.9629];
@@ -103,11 +121,20 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
             <div className="animate-slide-up h-full flex flex-col">
               <div className="mb-4">
                 <h3 className="text-xl font-bold text-foreground mb-1">Step 1: Location</h3>
-                <p className="text-sm text-foreground-muted">Pin exactly where the bin is located.</p>
+                <p className="text-sm text-foreground-muted mb-4">Pin exactly where the bin is located.</p>
+                
+                <div className="bg-primary/5 border border-primary/20 p-3 rounded-xl flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                    <MapPin className="w-4 h-4 text-primary" />
+                  </div>
+                  <p className="text-[11px] font-bold text-primary leading-tight">
+                    ZOOM THE MAP AND TOUCH THE LOCATION TO GET MORE ACCURATE PIN.
+                  </p>
+                </div>
               </div>
               
-              <div className="flex-1 min-h-[300px] w-full rounded-xl overflow-hidden shadow-inner border border-border relative">
-                <MapContainer center={centerLoc} zoom={16} zoomControl={false} className="w-full h-full" dragging={true}>
+              <div className="flex-1 min-h-[300px] w-full rounded-2xl overflow-hidden shadow-inner border border-border relative">
+                <MapContainer center={centerLoc} zoom={18} zoomControl={false} className="w-full h-full" dragging={true}>
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                   <MapClicker onLocationSelect={(lat, lng) => setSelectedLoc([lat, lng])} />
                   {(selectedLoc || userLocation) && <Marker position={(selectedLoc || userLocation) as [number, number]} icon={addIcon} />}
@@ -115,7 +142,7 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
                 
                 {!(selectedLoc || userLocation) && (
                   <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] z-[1000] flex items-center justify-center pointer-events-none">
-                    <p className="font-semibold text-foreground bg-white px-4 py-2 rounded-full shadow-medium">Tap map to pin location</p>
+                    <p className="font-semibold text-foreground bg-white px-4 py-2 rounded-full shadow-medium animate-pulse">Tap map to pin location</p>
                   </div>
                 )}
               </div>
@@ -172,11 +199,11 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[300px]">
-                <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
+                <input type="file" accept="image/jpeg, image/png" capture="environment" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
                 
                 {photoPreview ? (
                   <div className="relative w-full h-[300px] rounded-xl overflow-hidden shadow-medium border border-border">
-                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={photoPreview} alt="Preview" className="w-full h-full object-contain bg-black/5" />
                     <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 backdrop-blur-md text-white rounded-full text-sm font-medium hover:bg-black/80 transition-colors shadow-lg active:scale-95">
                       Retake Photo
                     </button>
@@ -242,8 +269,12 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit }: AddBinS
           )}
           {step === 4 && (
             <>
-              <button onClick={handleSubmit} className="w-full h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 active:scale-95 transition-all mb-2">
-                Submit Public Bin
+              <button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting}
+                className="w-full h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 active:scale-95 transition-all mb-2 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Public Bin'}
               </button>
               <p className="text-[11px] text-foreground-muted text-center font-medium">No login required. 100% anonymous.</p>
             </>

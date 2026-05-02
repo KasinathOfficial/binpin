@@ -1,17 +1,20 @@
-import { useState } from 'react';
-import { X, MapPin, ThumbsUp, AlertTriangle, ImageOff, Trash2, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, MapPin, ThumbsUp, AlertTriangle, ImageOff, Trash2, Clock, PlusCircle } from 'lucide-react';
 import type { Bin } from '../lib/appwrite';
 import { formatDistance, getDistance } from '../lib/geo';
 import { formatDistanceToNow } from 'date-fns';
+import { getRandomQuote } from '../lib/quotes';
 
 interface BinListSheetProps {
   bins: Bin[];
   userLocation: [number, number] | null;
   onClose: () => void;
   onSelectBin: (bin: Bin) => void;
+  onAddClick?: () => void;
+  onRequestClick?: () => void;
 }
 
-type SortMode = 'distance' | 'accurate' | 'reports' | 'newest';
+type SortMode = 'distance' | 'reported' | 'newest';
 
 const TYPE_CONFIG: Record<string, { bg: string; text: string; ring: string; label: string }> = {
   general:    { bg: 'bg-emerald-50',  text: 'text-emerald-700', ring: 'ring-emerald-400', label: 'General' },
@@ -20,17 +23,16 @@ const TYPE_CONFIG: Record<string, { bg: string; text: string; ring: string; labe
   medical:    { bg: 'bg-red-50',      text: 'text-red-700',     ring: 'ring-red-400',     label: 'Medical' },
 };
 
-export default function BinListSheet({ bins, userLocation, onClose, onSelectBin }: BinListSheetProps) {
+export default function BinListSheet({ bins, userLocation, onClose, onSelectBin, onAddClick, onRequestClick }: BinListSheetProps) {
   const [sortMode, setSortMode] = useState<SortMode>('distance');
+  const emptyQuote = useMemo(() => getRandomQuote(), []);
 
   const sortedBins = [...bins].sort((a, b) => {
     if (sortMode === 'distance' && userLocation) {
       const distA = getDistance(userLocation[0], userLocation[1], a.lat, a.lng);
       const distB = getDistance(userLocation[0], userLocation[1], b.lat, b.lng);
       return distA - distB;
-    } else if (sortMode === 'accurate') {
-      return b.upvote_count - a.upvote_count;
-    } else if (sortMode === 'reports') {
+    } else if (sortMode === 'reported') {
       return b.report_count - a.report_count;
     } else if (sortMode === 'newest') {
       return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
@@ -41,8 +43,7 @@ export default function BinListSheet({ bins, userLocation, onClose, onSelectBin 
   const sortButtons: { mode: SortMode; label: string }[] = [
     { mode: 'distance', label: 'Nearest' },
     { mode: 'newest',   label: 'Newest' },
-    { mode: 'accurate', label: 'Popular' },
-    { mode: 'reports',  label: 'Flagged' },
+    { mode: 'reported', label: 'Reported' },
   ];
 
   return (
@@ -97,10 +98,31 @@ export default function BinListSheet({ bins, userLocation, onClose, onSelectBin 
         {/* Scrollable List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {sortedBins.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground opacity-70">
-              <MapPin className="w-12 h-12 mb-3 text-muted-foreground/50" />
-              <p className="font-medium text-sm">No bins found.</p>
-              <p className="text-xs mt-1">Be the first to tag a bin nearby!</p>
+            <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+              <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center mb-6 border border-border shadow-inner">
+                <MapPin className="w-10 h-10 text-primary opacity-20" />
+              </div>
+              <p className="text-lg font-black text-foreground mb-2">No bins here yet!</p>
+              <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100/50 mb-8 italic">
+                <p className="text-sm font-bold text-primary/80 leading-relaxed">
+                  "{emptyQuote}"
+                </p>
+              </div>
+              
+              <div className="w-full space-y-3">
+                <button 
+                  onClick={onAddClick}
+                  className="w-full bg-primary text-white font-black py-4 rounded-2xl shadow-medium flex items-center justify-center gap-2 active:scale-95 transition-all"
+                >
+                  <PlusCircle className="w-5 h-5" /> Add a Bin Now
+                </button>
+                <button 
+                  onClick={onRequestClick}
+                  className="w-full bg-white text-foreground-secondary font-bold py-4 rounded-2xl border border-border flex items-center justify-center gap-2 active:scale-95 transition-all"
+                >
+                  Request one for your area
+                </button>
+              </div>
             </div>
           ) : (
             sortedBins.map(bin => {

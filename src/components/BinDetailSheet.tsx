@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Navigation, ThumbsUp, MessageSquare, AlertTriangle, Send, ImageOff, Share2, MapPin } from 'lucide-react';
+import { Navigation, ThumbsUp, MessageSquare, AlertTriangle, Send, ImageOff, Share2, MapPin, Edit3, X, CheckCircle2 } from 'lucide-react';
 import type { Bin, Comment } from '../lib/appwrite';
 import { databases, client, ID } from '../lib/appwrite';
 import { Query } from 'appwrite';
 import BottomSheet from './ui/BottomSheet';
 import { formatDistanceToNow } from 'date-fns';
 import { getDistance, formatDistance } from '../lib/geo';
+import { hasUpvotedBin, addUpvotedBin } from '../lib/votes';
 
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const commentsId = import.meta.env.VITE_APPWRITE_COMMENTS_COLLECTION_ID;
@@ -15,16 +16,33 @@ interface BinDetailSheetProps {
   userLocation: [number, number] | null;
   onClose: () => void;
   onHelpful: () => void;
-  onReport: () => void;
+  onReport: (reason: string) => void;
+  onSuggestEdit?: () => void;
 }
 
-export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, onReport }: BinDetailSheetProps) {
+export default function BinDetailSheet({ 
+  bin, 
+  userLocation, 
+  onClose, 
+  onHelpful, 
+  onReport,
+  onSuggestEdit 
+}: BinDetailSheetProps) {
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentSuccess, setCommentSuccess] = useState(false);
+  
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [voted, setVoted] = useState(false);
+
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setVoted(hasUpvotedBin(bin.id));
+  }, [bin.id]);
 
   // Calculate real distance
   const distanceMeters = userLocation
@@ -49,14 +67,26 @@ export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, 
     }
   }, [bin.id]);
 
+  const handleHelpful = () => {
+    if (voted) return;
+    addUpvotedBin(bin.id);
+    setVoted(true);
+    onHelpful();
+  };
+
+  const handleReportSubmit = () => {
+    if (!reportReason.trim()) return;
+    onReport(reportReason.trim());
+    setIsReporting(false);
+    setReportReason('');
+  };
+
   const handleDirections = () => {
-    // Use Google Maps navigation with GPS-based routing to the bin
     const url = `https://www.google.com/maps/dir/?api=1&destination=${bin.lat},${bin.lng}&travelmode=walking`;
     window.open(url, '_blank');
   };
 
   const handleAppleMaps = () => {
-    // Apple Maps for iOS users
     const url = `maps://maps.apple.com/?daddr=${bin.lat},${bin.lng}&dirflg=w`;
     window.open(url, '_blank');
   };
@@ -112,15 +142,14 @@ export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, 
     }
   };
 
-  // Determine city label from bin data
   const cityLabel = (bin as any).city || null;
 
   return (
-    <BottomSheet isOpen={true} onClose={onClose} height="72%">
+    <BottomSheet isOpen={true} onClose={onClose} height="78%">
       {/* Photo Hero */}
       <div className="-mx-4 -mt-4 relative h-[180px] bg-surface-raised mb-4 shrink-0 overflow-hidden">
         {bin.photo_url ? (
-          <img src={bin.photo_url} alt={bin.name} className="w-full h-full object-cover" />
+          <img src={bin.photo_url} alt={bin.name} className="w-full h-full object-contain bg-black/5" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-foreground-muted bg-gradient-to-br from-emerald-50 to-green-100">
             <ImageOff className="w-8 h-8 mb-2 opacity-40 text-emerald-600" />
@@ -151,19 +180,38 @@ export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, 
 
       <div className="px-1">
         {/* Title + location */}
-        <h2 className="text-lg font-bold text-foreground mb-0.5">{bin.name}</h2>
-        {cityLabel && (
-          <p className="text-sm text-foreground-muted mb-1 flex items-center gap-1">
-            <MapPin className="w-3 h-3 inline" /> {cityLabel}
-          </p>
-        )}
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">{bin.name}</h2>
+            {cityLabel && (
+              <p className="text-sm text-foreground-muted flex items-center gap-1">
+                <MapPin className="w-3 h-3 inline" /> {cityLabel}
+              </p>
+            )}
+          </div>
+          <button 
+            onClick={onSuggestEdit}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface rounded-lg text-[11px] font-bold text-foreground-secondary border border-border hover:text-primary hover:border-primary transition-all active:scale-95"
+          >
+            <Edit3 className="w-3.5 h-3.5" /> Suggest Edit
+          </button>
+        </div>
 
         {bin.notes && (
           <p className="text-sm text-foreground-secondary italic mb-3">"{bin.notes}"</p>
         )}
 
         <p className="text-xs text-foreground-muted uppercase tracking-widest mb-4">
-          Tagged anonymously · {bin.created_at ? formatDistanceToNow(new Date(bin.created_at), { addSuffix: true }) : 'Recently'}
+          Tagged anonymously · {(() => {
+            try {
+              if (!bin.created_at) return 'Recently';
+              const date = new Date(bin.created_at);
+              if (isNaN(date.getTime())) return 'Recently';
+              return formatDistanceToNow(date, { addSuffix: true });
+            } catch (e) {
+              return 'Recently';
+            }
+          })()}
         </p>
 
         <div className="h-px w-full bg-border border-0 mb-4" />
@@ -171,11 +219,16 @@ export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, 
         {/* Action buttons */}
         <div className="flex items-center gap-2 mb-4">
           <button
-            onClick={onHelpful}
-            className="flex-1 bg-white border border-border h-[44px] rounded-xl text-sm font-medium text-foreground hover:bg-emerald-50 hover:border-emerald-200 transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-subtle"
+            onClick={handleHelpful}
+            disabled={voted}
+            className={`flex-1 border h-[44px] rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-subtle ${
+              voted 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+              : 'bg-white border-border text-foreground hover:bg-emerald-50 hover:border-emerald-200'
+            }`}
           >
-            <ThumbsUp className="w-4 h-4 text-primary" />
-            Helpful — {bin.upvote_count || 0}
+            {voted ? <CheckCircle2 className="w-4 h-4" /> : <ThumbsUp className="w-4 h-4 text-primary" />}
+            {voted ? 'Voted Helpful' : `Helpful — ${bin.upvote_count || 0}`}
           </button>
           <button
             onClick={scrollToComments}
@@ -185,13 +238,39 @@ export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, 
             Comment — {comments.length}
           </button>
           <button
-            onClick={onReport}
+            onClick={() => setIsReporting(true)}
             className="flex-1 bg-white border border-border h-[44px] rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center justify-center gap-1.5 active:scale-95 shadow-subtle"
           >
             <AlertTriangle className="w-4 h-4" />
             Report
           </button>
         </div>
+
+        {/* Report Reason Input (Conditional) */}
+        {isReporting && (
+          <div className="mb-4 animate-slide-up">
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-black uppercase tracking-widest text-red-600">Why are you reporting?</h4>
+                <button onClick={() => setIsReporting(false)} className="text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+              </div>
+              <textarea
+                autoFocus
+                placeholder="e.g. Bin is missing, wrong location, or full..."
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                className="w-full p-3 bg-white border border-red-200 rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-red-100 h-20 resize-none mb-3"
+              />
+              <button 
+                onClick={handleReportSubmit}
+                disabled={!reportReason.trim()}
+                className="w-full bg-red-600 text-white font-bold py-2 rounded-lg text-sm disabled:opacity-50 transition-all active:scale-95 shadow-md shadow-red-200"
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Navigation Buttons */}
         <div className="flex gap-2 mb-6">
@@ -201,7 +280,6 @@ export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, 
           >
             <Navigation className="w-4 h-4" /> Get Route
           </button>
-          {/* Apple Maps fallback for iOS */}
           <button
             onClick={handleAppleMaps}
             className="h-[52px] px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-medium flex items-center justify-center gap-2 active:scale-95 transition-all text-xs"
@@ -222,7 +300,16 @@ export default function BinDetailSheet({ bin, userLocation, onClose, onHelpful, 
               <div key={i} className="bg-surface p-3 rounded-xl border border-border/50">
                 <p className="text-sm text-foreground mb-2 leading-relaxed">{c.text}</p>
                 <div className="text-xs text-foreground-muted text-right">
-                  {c.created_at ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true }) : 'Just now'}
+                  {(() => {
+                    try {
+                      if (!c.created_at) return 'Just now';
+                      const date = new Date(c.created_at);
+                      if (isNaN(date.getTime())) return 'Just now';
+                      return formatDistanceToNow(date, { addSuffix: true });
+                    } catch (e) {
+                      return 'Just now';
+                    }
+                  })()}
                 </div>
               </div>
             ))}

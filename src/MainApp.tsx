@@ -12,10 +12,14 @@ import BinListSheet from './components/BinListSheet';
 import RequestBinSheet from './components/RequestBinSheet';
 import RequestDetailSheet from './components/RequestDetailSheet';
 import InstallBanner from './components/InstallBanner';
+import SuccessCelebration from './components/SuccessCelebration';
 import { databases, storage, client, ID } from './lib/appwrite';
 import type { Bin, BinRequest } from './lib/appwrite';
 import { Query } from 'appwrite';
 import { getDistance, formatDistance } from './lib/geo';
+import { addUpvotedBin, addUpvotedRequest } from './lib/votes';
+import { compressImage } from './lib/image';
+import { Loader2 } from 'lucide-react';
 
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const binsId = import.meta.env.VITE_APPWRITE_BINS_COLLECTION_ID;
@@ -24,17 +28,48 @@ const reportsId = import.meta.env.VITE_APPWRITE_REPORTS_COLLECTION_ID;
 const reqsId = import.meta.env.VITE_APPWRITE_REQUESTS_COLLECTION_ID;
 const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
 
-/** Upload a File to Appwrite Storage, return the CDN view URL or null on failure */
 async function uploadPhoto(file: File): Promise<string | null> {
-  if (!bucketId) return null;
+  if (!bucketId) {
+    console.error('Appwrite Bucket ID is missing');
+    return null;
+  }
+  if (!file || !(file instanceof File)) {
+    console.warn('Invalid file object provided to uploadPhoto');
+    return null;
+  }
+
+  // Compress image before upload
+  let fileToUpload = file;
   try {
-    const uploaded = await storage.createFile(bucketId, ID.unique(), file);
-    // Build the public view URL
-    const endpoint = 'https://sgp.cloud.appwrite.io/v1';
-    const projectId = '69ed94eb0033f1ed70e4';
+    console.log(`Original size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+    fileToUpload = await compressImage(file);
+    console.log(`Compressed size: ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB`);
+  } catch (err) {
+    console.warn('Compression failed, using original file', err);
+  }
+
+  // 10MB limit check (after compression)
+  if (fileToUpload.size > 10 * 1024 * 1024) {
+    alert('Photo is too large (Max 10MB even after compression).');
+    return null;
+  }
+
+  try {
+    const uploaded = await storage.createFile(bucketId, ID.unique(), fileToUpload);
+    let endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1';
+    // Sanitize endpoint: remove trailing slash if present
+    endpoint = endpoint.replace(/\/$/, '');
+    
+    const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID || '69ed94eb0033f1ed70e4';
     return `${endpoint}/storage/buckets/${bucketId}/files/${uploaded.$id}/view?project=${projectId}`;
-  } catch (e) {
-    console.warn('Photo upload failed, continuing without photo:', e);
+  } catch (e: any) {
+    console.error('Photo upload failed:', e.message || e);
+    // If it's a "Failed to fetch", it's likely a network/CORS issue
+    if (e.message?.includes('Failed to fetch')) {
+      alert('Network Error: Photo upload failed. Please check your internet or if the Appwrite project is active.');
+    } else {
+      alert('Photo upload failed: ' + (e.message || 'Check Appwrite permissions or file size.'));
+    }
     return null;
   }
 }
@@ -54,16 +89,19 @@ export default function MainApp() {
   const [activeBin, setActiveBin] = useState<Bin | null>(null);
   const [activeReq, setActiveReq] = useState<BinRequest | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingBin, setEditingBin] = useState<Bin | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
   const [isFeedback, setIsFeedback] = useState(false);
   const [isBinList, setIsBinList] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [successType, setSuccessType] = useState<'add' | 'update' | 'request'>('add');
+  const [isGlobalLoading, setIsGlobalLoading] = useState(false);
 
   useEffect(() => {
     fetchBins();
     fetchRequests();
     
     if (dbId && binsId && reqsId) {
-      // Small delay to ensure WebSocket is ready
       const timer = setTimeout(() => {
         const channels = [
           `databases.${dbId}.collections.${binsId}.documents`,
@@ -73,13 +111,12 @@ export default function MainApp() {
         const sub = client.subscribe(channels, (response) => {
           const payload = response.payload as any;
           const id = payload.$id;
-          
-          // Check which collection the update belongs to
+          const created_at = payload.$createdAt;
           const isBin = response.channels.some(c => c.includes(binsId));
           const isReq = response.channels.some(c => c.includes(reqsId));
 
           if (isBin) {
-            const mappedBin = { ...payload, id } as unknown as Bin;
+            const mappedBin = { ...payload, id, created_at } as unknown as Bin;
             if (response.events.includes("databases.*.collections.*.documents.*.create")) {
               setBins(prev => [...prev, mappedBin]);
             } else if (response.events.includes("databases.*.collections.*.documents.*.update")) {
@@ -88,7 +125,7 @@ export default function MainApp() {
               setBins(prev => prev.filter(b => b.id !== id));
             }
           } else if (isReq) {
-            const mappedReq = { ...payload, id } as unknown as BinRequest;
+            const mappedReq = { ...payload, id, created_at } as unknown as BinRequest;
             if (response.events.includes("databases.*.collections.*.documents.*.create")) {
               setRequests(prev => [...prev, mappedReq]);
             } else if (response.events.includes("databases.*.collections.*.documents.*.update")) {
@@ -106,10 +143,8 @@ export default function MainApp() {
     }
   }, []);
 
-  // Request location immediately on mount
   useEffect(() => {
     if (navigator.geolocation) {
-      // Initial low accuracy fix
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
         null,
@@ -130,13 +165,9 @@ export default function MainApp() {
     if(!dbId || !reqsId) return;
     try {
       const resp = await databases.listDocuments(dbId, reqsId);
-      setRequests(resp.documents.map(d => ({ ...d, id: d.$id })) as unknown as BinRequest[]);
+      setRequests(resp.documents.map(d => ({ ...d, id: d.$id, created_at: d.$createdAt })) as unknown as BinRequest[]);
     } catch(e: any) { 
-      if (e.code === 404) {
-        console.warn(`Requests collection (${reqsId}) not found. Features depending on requests will be disabled.`);
-      } else {
-        console.error("Appwrite fetch error", e); 
-      }
+      console.warn("Appwrite fetch error", e);
     }
   };
 
@@ -144,7 +175,7 @@ export default function MainApp() {
     if(!dbId || !binsId) return;
     try {
       const resp = await databases.listDocuments(dbId, binsId, [Query.equal('is_deleted', false)]);
-      setBins(resp.documents.map(d => ({ ...d, id: d.$id })) as unknown as Bin[]);
+      setBins(resp.documents.map(d => ({ ...d, id: d.$id, created_at: d.$createdAt })) as unknown as Bin[]);
     } catch(e) { console.warn("Appwrite fetch error", e); }
   };
 
@@ -152,16 +183,18 @@ export default function MainApp() {
     setShowSplash(false);
   };
 
-  // Derived state
   const visibleBins = useMemo(() => {
     let list = bins;
-    
     if (searchQuery) {
-      list = list.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()) || (b.notes && b.notes.toLowerCase().includes(searchQuery.toLowerCase())));
+      const q = searchQuery.toLowerCase();
+      list = list.filter(b => 
+        (b.name?.toLowerCase().includes(q)) || 
+        (b.notes?.toLowerCase().includes(q)) ||
+        (b.city?.toLowerCase().includes(q))
+      );
     }
-    
     return list;
-  }, [bins, searchQuery, userLoc]);
+  }, [bins, searchQuery]);
 
   const nearestBinInfo = useMemo(() => {
     if (!userLoc || bins.length === 0) return undefined;
@@ -177,18 +210,8 @@ export default function MainApp() {
 
   const stats = useMemo(() => {
     const citySet = new Set<string>();
-    bins.forEach(b => {
-      if (b.city) citySet.add(b.city);
-      else {
-        // Fallback for legacy data
-        const city = b.name.split(',').pop()?.trim();
-        if (city) citySet.add(city);
-      }
-    });
-    requests.forEach(r => {
-      if (r.city) citySet.add(r.city);
-    });
-
+    bins.forEach(b => { if (b.city) citySet.add(b.city); });
+    requests.forEach(r => { if (r.city) citySet.add(r.city); });
     return {
       totalBins: bins.length,
       cityCount: citySet.size,
@@ -199,8 +222,6 @@ export default function MainApp() {
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-background">
       {showSplash && <Splash onStart={handleStart} />}
-
-      {/* PWA Install Banner - always rendered so it shows on every refresh */}
       <InstallBanner />
 
       {!showSplash && (
@@ -242,6 +263,8 @@ export default function MainApp() {
               bins={visibleBins}
               userLocation={userLoc}
               onClose={() => setIsBinList(false)}
+              onAddClick={() => { setIsBinList(false); setIsAdding(true); }}
+              onRequestClick={() => { setIsBinList(false); setIsRequesting(true); }}
               onSelectBin={(b) => {
                 setIsBinList(false);
                 setActiveBin(b);
@@ -261,14 +284,19 @@ export default function MainApp() {
                   await databases.updateDocument(dbId, binsId, activeBin.id, { upvote_count: doc.upvote_count + 1 });
                 } catch(e) {}
               }}
-              onReport={async () => {
+              onReport={async (reason) => {
                 if(!dbId || !binsId || !reportsId) return;
                 try {
-                  await databases.createDocument(dbId, reportsId, ID.unique(), { bin_id: activeBin.id, reason: 'Flagged by user' });
+                  await databases.createDocument(dbId, reportsId, ID.unique(), { bin_id: activeBin.id, reason });
                   const doc = await databases.getDocument(dbId, binsId, activeBin.id);
                   await databases.updateDocument(dbId, binsId, activeBin.id, { report_count: doc.report_count + 1 });
-                  alert('Bin reported.');
+                  alert('Thank you for reporting. Our team will review this shortly.');
                 } catch(e) {}
+              }}
+              onSuggestEdit={() => {
+                setEditingBin(activeBin);
+                setActiveBin(null);
+                setIsAdding(true);
               }}
             />
           )}
@@ -279,6 +307,7 @@ export default function MainApp() {
               onClose={() => setActiveReq(null)}
               onUpvote={async () => {
                 if(!dbId || !reqsId) return;
+                addUpvotedRequest(activeReq.id);
                 try {
                   const doc = await databases.getDocument(dbId, reqsId, activeReq.id);
                   await databases.updateDocument(dbId, reqsId, activeReq.id, { upvote_count: doc.upvote_count + 1 });
@@ -291,21 +320,43 @@ export default function MainApp() {
           {isAdding && (
             <AddBinSheet
               userLocation={userLoc}
-              onClose={() => setIsAdding(false)}
+              initialData={editingBin || undefined}
+              onClose={() => { setIsAdding(false); setEditingBin(null); }}
               onSubmit={async (data) => {
                 if (dbId && binsId) {
-                  const { photoFile, photo: _photo, ...rest } = data;
-                  // Upload photo to Appwrite Storage if provided
-                  const photo_url = photoFile ? await uploadPhoto(photoFile) : null;
-                  await databases.createDocument(dbId, binsId, ID.unique(), {
-                    ...rest,
-                    photo_url,
-                    upvote_count: 0,
-                    report_count: 0,
-                    is_deleted: false,
-                  });
+                  setIsGlobalLoading(true);
+                  try {
+                    const { photoFile, ...rest } = data;
+                    const photo_url = photoFile ? await uploadPhoto(photoFile) : (editingBin?.photo_url || null);
+                    
+                    if (editingBin) {
+                      // Update existing bin
+                      await databases.updateDocument(dbId, binsId, editingBin.id, {
+                        ...rest,
+                        photo_url,
+                      });
+                      setSuccessType('update');
+                      setIsSuccess(true);
+                    } else {
+                      // Create new bin
+                      await databases.createDocument(dbId, binsId, ID.unique(), {
+                        ...rest,
+                        photo_url,
+                        upvote_count: 0,
+                        report_count: 0,
+                        is_deleted: false,
+                      });
+                      setSuccessType('add');
+                      setIsSuccess(true);
+                    }
+                    setIsAdding(false);
+                    setEditingBin(null);
+                  } catch (e: any) {
+                    alert(`Failed to save bin: ${e.message || 'Unknown error'}`);
+                  } finally {
+                    setIsGlobalLoading(false);
+                  }
                 }
-                setIsAdding(false);
               }}
             />
           )}
@@ -316,18 +367,25 @@ export default function MainApp() {
               onClose={() => setIsRequesting(false)}
               onSubmit={async (data) => {
                 if (dbId && reqsId) {
-                  const { photo: photoFile, ...rest } = data;
-                  // Upload proof photo if provided
-                  const photo_url = (photoFile && typeof photoFile !== 'string') ? await uploadPhoto(photoFile) : null;
-                  await databases.createDocument(dbId, reqsId, ID.unique(), {
-                    ...rest,
-                    photo_url,
-                    status: 'requested',
-                    upvote_count: 1,
-                  });
-                  alert('Request submitted for municipal review.');
+                  setIsGlobalLoading(true);
+                  try {
+                    const { photoFile, ...rest } = data;
+                    const photo_url = photoFile ? await uploadPhoto(photoFile) : null;
+                    await databases.createDocument(dbId, reqsId, ID.unique(), {
+                      ...rest,
+                      photo_url,
+                      status: 'requested',
+                      upvote_count: 1,
+                    });
+                    setSuccessType('request');
+                    setIsSuccess(true);
+                    setIsRequesting(false);
+                  } catch (e: any) {
+                    alert(`Failed to submit request: ${e.message || 'Unknown error'}`);
+                  } finally {
+                    setIsGlobalLoading(false);
+                  }
                 }
-                setIsRequesting(false);
               }}
             />
           )}
@@ -343,6 +401,20 @@ export default function MainApp() {
                 setIsFeedback(false);
               }}
             />
+          )}
+
+          {isSuccess && <SuccessCelebration type={successType} onClose={() => setIsSuccess(false)} />}
+          
+          {isGlobalLoading && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center text-white">
+              <div className="bg-surface-raised p-8 rounded-3xl flex flex-col items-center gap-4 shadow-strong border border-white/10 animate-scale-in">
+                <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-xl font-bold">Syncing with BinPin...</p>
+                  <p className="text-sm text-foreground-muted">Optimizing and uploading your contribution</p>
+                </div>
+              </div>
+            </div>
           )}
         </>
       )}

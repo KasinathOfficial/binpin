@@ -16,6 +16,7 @@ export default function BottomSheet({ isOpen, onClose, children, height = 'auto'
     'auto': 'h-auto max-h-[92dvh]',
     '65%': 'h-[65dvh]',
     '72%': 'h-[72dvh]',
+    '78%': 'h-[78dvh]',
     '80%': 'h-[80dvh]',
     '92%': 'h-[92dvh]'
   };

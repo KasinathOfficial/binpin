@@ -131,9 +131,9 @@ export default function AdminDashboard() {
       label: 'Active Bins',
       value: activeBins.length,
       icon: MapPin,
-      color: 'text-emerald-400',
-      bgColor: 'bg-emerald-900/30',
-      borderColor: 'border-emerald-800/50',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
+      borderColor: 'border-emerald-100',
       live: true,
       sub: `+${bins.filter(b => {
         const d = new Date(b.created_at);
@@ -144,9 +144,9 @@ export default function AdminDashboard() {
       label: 'Total Comments',
       value: comments.length,
       icon: MessageSquare,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-900/30',
-      borderColor: 'border-blue-800/50',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-100',
       live: false,
       sub: 'community notes',
     },
@@ -154,9 +154,9 @@ export default function AdminDashboard() {
       label: 'App Feedback',
       value: feedback.length,
       icon: Heart,
-      color: 'text-pink-400',
-      bgColor: 'bg-pink-900/30',
-      borderColor: 'border-pink-800/50',
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50',
+      borderColor: 'border-pink-100',
       live: false,
       sub: `avg ${feedback.length ? (feedback.reduce((a, f) => a + f.rating, 0) / feedback.length).toFixed(1) : '—'} ★`,
     },
@@ -164,9 +164,9 @@ export default function AdminDashboard() {
       label: 'Reported Bins',
       value: bins.filter(b => b.report_count > 0).length,
       icon: AlertTriangle,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-900/30',
-      borderColor: 'border-amber-800/50',
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      borderColor: 'border-amber-100',
       live: false,
       sub: 'needs review',
     },
@@ -176,22 +176,22 @@ export default function AdminDashboard() {
     <AdminLayout>
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">System Overview</h1>
-          <p className="text-slate-400 mt-1">Global operations dashboard and analytics</p>
+          <h1 className="text-3xl font-bold text-slate-900">System Overview</h1>
+          <p className="text-slate-500 mt-1 font-medium">Global operations dashboard and analytics</p>
         </div>
         {/* Live status indicator */}
-        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
-          <Activity className={`w-4 h-4 transition-colors ${liveIndicator ? 'text-emerald-400' : 'text-slate-600'}`} />
-          <span className="text-xs font-semibold text-slate-400">
-            {liveIndicator ? <span className="text-emerald-400">Live Update</span> : 'Live'}
+        <div className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm">
+          <Activity className={`w-4 h-4 transition-colors ${liveIndicator ? 'text-emerald-500' : 'text-slate-300'}`} />
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            {liveIndicator ? <span className="text-emerald-500">Live Update</span> : 'System Online'}
           </span>
-          <div className={`w-2 h-2 rounded-full transition-colors ${liveIndicator ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-700'}`} />
+          <div className={`w-2 h-2 rounded-full transition-colors ${liveIndicator ? 'bg-emerald-500 animate-pulse' : 'bg-slate-200'}`} />
         </div>
       </div>
 
       {loading ? (
         <div className="py-20 flex justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-slate-900"></div>
         </div>
       ) : (
         <>
@@ -200,21 +200,20 @@ export default function AdminDashboard() {
             {stats.map((stat, i) => {
               const Icon = stat.icon;
               return (
-                <div key={i} className={`bg-slate-900 border ${stat.borderColor} p-6 rounded-2xl flex items-center justify-between shadow-lg hover:border-slate-700 transition-colors`}>
+                <div key={i} className={`bg-white border ${stat.borderColor} p-6 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md transition-shadow`}>
                   <div>
-                    <p className="text-xs font-semibold uppercase text-slate-500 tracking-wider">{stat.label}</p>
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{stat.label}</p>
                     <div className="flex items-end gap-2 mt-1">
-                      <h3 className="text-3xl font-extrabold text-white">{stat.value.toLocaleString()}</h3>
+                      <h3 className="text-3xl font-black text-slate-900">{stat.value.toLocaleString()}</h3>
                       {stat.live && (
-                        <span className="mb-1 text-[10px] font-bold text-emerald-400 bg-emerald-950 border border-emerald-800 px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                        <span className="mb-1 text-[9px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1 tracking-wider">
                           LIVE
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-600 mt-1 font-medium">{stat.sub}</p>
+                    <p className="text-[11px] text-slate-500 mt-1 font-bold uppercase tracking-wider">{stat.sub}</p>
                   </div>
-                  <div className={`p-3 ${stat.bgColor} rounded-xl ${stat.color} border ${stat.borderColor}`}>
+                  <div className={`p-4 ${stat.bgColor} rounded-2xl ${stat.color} border ${stat.borderColor}`}>
                     <Icon className="w-6 h-6" />
                   </div>
                 </div>
@@ -223,15 +222,15 @@ export default function AdminDashboard() {
           </div>
 
           {/* Bin type breakdown - prominent */}
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg mb-6">
-            <h3 className="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" /> Bin Count by Type (Real-time)
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm mb-6">
+            <h3 className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-6 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-500" /> Bin Count by Type (Real-time)
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {metricChartData.map(item => (
-                <div key={item.name} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-extrabold text-white mb-1">{item.value}</div>
-                  <div className="text-xs font-bold uppercase tracking-wider" style={{ color: item.fill }}>{item.name}</div>
+                <div key={item.name} className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center">
+                  <div className="text-3xl font-black text-slate-900 mb-1">{item.value}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: item.fill }}>{item.name}</div>
                 </div>
               ))}
             </div>
@@ -239,18 +238,18 @@ export default function AdminDashboard() {
 
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
-              <h3 className="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-6 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary" /> Bin Distribution by Type
+            <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
+              <h3 className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-8 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-slate-900" /> Bin Distribution
               </h3>
               <div className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={metricChartData}>
-                    <XAxis dataKey="name" fontSize={11} stroke="#64748b" tickLine={false} axisLine={false} />
-                    <YAxis fontSize={11} stroke="#64748b" tickLine={false} axisLine={false} />
+                    <XAxis dataKey="name" fontSize={10} fontWeight="bold" stroke="#94a3b8" tickLine={false} axisLine={false} />
+                    <YAxis fontSize={10} fontWeight="bold" stroke="#94a3b8" tickLine={false} axisLine={false} />
                     <Tooltip
-                      cursor={{ fill: '#1e293b' }}
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f1f5f9' }}
+                      cursor={{ fill: '#f8fafc' }}
+                      contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}
                     />
                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                       {metricChartData.map((entry, index) => (
@@ -262,22 +261,22 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
-              <h3 className="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-6 flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-400" /> Platform Traffic (Page Views)
+            <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
+              <h3 className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-8 flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-500" /> Page Views Trend
               </h3>
               <div className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={viewChartData}>
-                    <XAxis dataKey="date" fontSize={11} stroke="#64748b" tickLine={false} axisLine={false} />
-                    <YAxis fontSize={11} stroke="#64748b" tickLine={false} axisLine={false} />
+                    <XAxis dataKey="date" fontSize={10} fontWeight="bold" stroke="#94a3b8" tickLine={false} axisLine={false} />
+                    <YAxis fontSize={10} fontWeight="bold" stroke="#94a3b8" tickLine={false} axisLine={false} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f1f5f9' }}
+                      contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}
                     />
-                    <Area type="monotone" dataKey="views" stroke="#3b82f6" fill="url(#colorViews)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="views" stroke="#3b82f6" fill="url(#colorViews)" strokeWidth={3} />
                     <defs>
                       <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
@@ -287,46 +286,19 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Bins added trend */}
-          {binTrendData.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg mb-8">
-              <h3 className="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-6 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-emerald-400" /> Bins Added (Last 7 Days)
-              </h3>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={binTrendData}>
-                    <XAxis dataKey="date" fontSize={11} stroke="#64748b" tickLine={false} axisLine={false} />
-                    <YAxis fontSize={11} stroke="#64748b" tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f1f5f9' }}
-                    />
-                    <Area type="monotone" dataKey="bins" stroke="#1E8A4A" fill="url(#colorBins)" strokeWidth={2} />
-                    <defs>
-                      <linearGradient id="colorBins" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#1E8A4A" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#1E8A4A" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
           {/* Recent Activity */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
-            <h3 className="text-sm font-semibold text-slate-400 tracking-wider uppercase mb-4">Latest Platform Activity</h3>
-            <div className="divide-y divide-slate-800">
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+            <h3 className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-6">Latest Feedback Activity</h3>
+            <div className="divide-y divide-slate-100">
               {feedback.slice(0, 5).map(f => (
-                <div key={f.id} className="py-3 flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="text-amber-400 font-bold bg-slate-800 px-2 py-1 rounded-lg border border-slate-700 text-xs flex items-center gap-1">
+                <div key={f.id} className="py-4 flex items-center justify-between text-sm group">
+                  <div className="flex items-center gap-4">
+                    <span className="text-amber-600 font-black bg-amber-50 px-3 py-1 rounded-full border border-amber-100 text-[10px] tracking-tighter">
                       {f.rating} ★
                     </span>
-                    <span className="text-slate-300 max-w-xs md:max-w-md truncate">{f.message || 'No written response'}</span>
+                    <span className="text-slate-600 font-bold max-w-xs md:max-w-md truncate group-hover:text-slate-900 transition-colors">{f.message || 'No written response'}</span>
                   </div>
-                  <span className="text-slate-500 text-xs whitespace-nowrap ml-4">{new Date(f.created_at).toLocaleDateString()}</span>
+                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap ml-4">{new Date(f.created_at).toLocaleDateString()}</span>
                 </div>
               ))}
             </div>

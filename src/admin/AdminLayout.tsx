@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-surface flex items-center justify-center text-foreground">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -66,23 +66,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/admin' },
     { id: 'bins', label: 'Manage Bins', icon: MapPin, path: '/admin/bins' },
     { id: 'requests', label: 'Bin Requests', icon: CheckSquare, path: '/admin/requests' },
-    { id: 'comments', label: 'Comments', icon: MessageSquare, path: '/admin/comments' },
     { id: 'feedback', label: 'App Feedback', icon: Heart, path: '/admin/feedback' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-surface text-foreground flex flex-col md:flex-row">
       {/* Mobile Top Navigation */}
-      <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between sticky top-0 z-50">
+      <div className="md:hidden bg-white border-b border-border p-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <div className="bg-primary/20 p-1.5 rounded-lg text-primary">
+          <div className="bg-primary p-1.5 rounded-lg text-white">
             <Shield className="w-5 h-5" />
           </div>
-          <span className="font-bold tracking-tight text-slate-200">BinPin Admin</span>
+          <span className="font-bold tracking-tight text-foreground">BinPin Admin</span>
         </div>
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg"
+          className="p-2 text-foreground-secondary hover:text-foreground bg-surface-raised rounded-lg"
           aria-label="Toggle Mobile Menu"
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -92,17 +91,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar Navigation */}
       <aside className={`
         fixed md:relative inset-y-0 left-0 z-40 
-        w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between
+        w-64 bg-white border-r border-border flex flex-col justify-between
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         md:flex md:w-64 pt-16 md:pt-0
       `}>
         <div className="p-6">
           <div className="hidden md:flex items-center gap-3 mb-8">
-            <div className="bg-primary/20 p-2 rounded-xl text-primary">
+            <div className="bg-primary p-2 rounded-xl text-white">
               <Shield className="w-6 h-6" />
             </div>
-            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">BinPin Admin</span>
+            <span className="font-bold text-xl tracking-tight text-foreground">BinPin Admin</span>
           </div>
           
           <nav className="space-y-1">
@@ -113,10 +112,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <button
                   key={item.id}
                   onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                     isActive 
-                      ? 'bg-primary text-white shadow-lg shadow-primary/25' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                      ? 'bg-primary text-white shadow-medium' 
+                      : 'text-foreground-secondary hover:text-foreground hover:bg-surface'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -127,14 +126,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
         </div>
 
-        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold text-slate-400">{adminUser?.name || 'Administrator'}</span>
-            <span className="text-[10px] text-slate-500 truncate max-w-[140px]">{adminUser?.email || 'admin@binpin.local'}</span>
+        <div className="p-6 border-t border-border bg-surface-raised/50 flex items-center justify-between">
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-xs font-bold text-foreground truncate">{adminUser?.name || 'Administrator'}</span>
+            <span className="text-[10px] text-foreground-secondary truncate">{adminUser?.email || 'admin@binpin.local'}</span>
           </div>
           <button 
             onClick={handleLogout}
-            className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-lg text-foreground-muted hover:text-red hover:bg-red-light transition-colors"
             title="Log Out"
           >
             <LogOut className="w-5 h-5" />
@@ -146,17 +145,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)} 
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-30 md:hidden"
         />
       )}
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 md:p-10 overflow-y-auto w-full">
         <div className="max-w-7xl mx-auto">
-
           {children}
         </div>
       </main>
     </div>
   );
 }
+

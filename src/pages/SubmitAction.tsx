@@ -122,7 +122,7 @@ export default function SubmitAction() {
               <input type="file" accept="image/*" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
               {photoPreview ? (
                 <div className="relative w-full h-[200px] rounded-lg overflow-hidden shadow-subtle border border-border">
-                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                  <img src={photoPreview} alt="Preview" className="w-full h-full object-contain bg-black/5" />
                   <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-2 right-2 px-3 py-1 bg-black/70 backdrop-blur-md text-white text-xs font-medium rounded-md shadow-sm">
                     Retake
                   </button>
