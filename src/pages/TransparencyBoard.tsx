@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Search, Filter, AlertCircle, CheckCircle2, Clock, Shield, Image as ImageIcon, Camera, Send, ChevronDown, ChevronUp, MapPin, Hash, ThumbsUp } from 'lucide-react';
+import { ChevronLeft, Search, Filter, CheckCircle2, Clock, Shield, MapPin, ThumbsUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { databases, storage, client, ID } from '../lib/appwrite';
+import { databases, client } from '../lib/appwrite';
 import type { BinRequest, MunicipalAction } from '../lib/appwrite';
 import { Query } from 'appwrite';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,9 +11,7 @@ import { hasUpvotedRequest, addUpvotedRequest } from '../lib/votes';
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const reqId = import.meta.env.VITE_APPWRITE_REQUESTS_COLLECTION_ID;
 const actionId = import.meta.env.VITE_APPWRITE_ACTIONS_COLLECTION_ID;
-const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
-const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
-const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
+
 
 export default function TransparencyBoard() {
   const navigate = useNavigate();
@@ -22,14 +20,7 @@ export default function TransparencyBoard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'requested' | 'under_review' | 'action_taken' | 'installed'>('all');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedReq, setSelectedReq] = useState<BinRequest | null>(null);
-  
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
-  const [updateStatus, setUpdateStatus] = useState<'action_taken' | 'installed'>('action_taken');
-  const [updateProof, setUpdateProof] = useState<File | null>(null);
-  const [updateDesignation, setUpdateDesignation] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -103,37 +94,6 @@ export default function TransparencyBoard() {
     } catch (e) {}
   };
 
-  const handleUpdateAction = async (requestId: string) => {
-    if (!dbId || !reqId || !actionId || !bucketId) return;
-    setSubmitting(true);
-    try {
-      let proofUrl = '';
-      if (updateProof) {
-        const file = await storage.createFile(bucketId, ID.unique(), updateProof);
-        proofUrl = `${endpoint}/storage/buckets/${bucketId}/files/${file.$id}/view?project=${projectId}`;
-      }
-
-      await databases.createDocument(dbId, actionId, ID.unique(), {
-        request_id: requestId,
-        designation: updateDesignation || "Municipal Officer",
-        action_taken: updateStatus === 'installed' ? "Bin Installed" : "Work in Progress",
-        proof_url: proofUrl,
-      });
-
-      await databases.updateDocument(dbId, reqId, requestId, {
-        status: updateStatus
-      });
-
-      await fetchData();
-      setIsUpdating(null);
-      setUpdateProof(null);
-      setUpdateDesignation('');
-    } catch (e: any) {
-      alert("Error updating action: " + e.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const filteredRequests = requests.filter(req => {
     const query = searchQuery.toLowerCase();
@@ -215,14 +175,12 @@ export default function TransparencyBoard() {
           </div>
         ) : (
           filteredRequests.map(req => {
-            const isExpanded = expandedId === req.id;
-            const reqAction = actions.find(a => a.request_id === req.id);
             const isVoted = hasUpvotedRequest(req.id);
 
             return (
               <div 
                 key={req.id} 
-                className={`bg-white rounded-2xl border transition-all duration-300 shadow-subtle overflow-hidden ${isExpanded ? 'border-primary ring-1 ring-primary/20' : 'border-border'}`}
+                className="bg-white rounded-2xl border transition-all duration-300 shadow-subtle overflow-hidden border-border"
                 onClick={() => setSelectedReq(req)}
               >
                 <div className="p-4 flex items-start gap-3 cursor-pointer active:bg-surface-raised/50">
@@ -275,18 +233,6 @@ export default function TransparencyBoard() {
                   </div>
                 </div>
 
-                {/* Quick Officer Trigger (Hidden in main list, visible only if expanded via detail) */}
-                {isExpanded && (
-                  <div className="px-4 pb-4 animate-slide-up">
-                    <div className="h-[1px] bg-border mb-4" />
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setIsUpdating(isUpdating === req.id ? null : req.id); }}
-                      className="w-full py-2.5 rounded-xl border border-border bg-surface-raised flex items-center justify-center gap-2 text-xs font-bold text-foreground hover:bg-border/30 transition-colors active:scale-95 shadow-sm"
-                    >
-                      <AlertCircle className="w-4 h-4 text-orange" /> Officer Dashboard
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })

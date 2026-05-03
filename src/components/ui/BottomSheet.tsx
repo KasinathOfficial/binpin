@@ -6,7 +6,7 @@ interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   children: ReactNode;
-  height?: 'auto' | '65%' | '72%' | '80%' | '92%';
+  height?: 'auto' | '65%' | '72%' | '78%' | '80%' | '92%';
   title?: string;
   accentBorder?: boolean;
 }

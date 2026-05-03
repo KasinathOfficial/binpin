@@ -1,4 +1,4 @@
-import { MapPin, Hash, Clock, Shield, CheckCircle2, ChevronLeft, ThumbsUp, Map as MapIcon, Calendar, Image as ImageIcon, Navigation, ExternalLink } from 'lucide-react';
+import { MapPin, Clock, Shield, CheckCircle2, ChevronLeft, ThumbsUp, Map as MapIcon, Calendar, Image as ImageIcon, Navigation } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { formatDistanceToNow } from 'date-fns';

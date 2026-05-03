@@ -121,7 +121,7 @@ export default function AdminDashboard() {
     acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
-  const binTrendData = Object.keys(binsByDate)
+  Object.keys(binsByDate)
     .map(date => ({ date, bins: binsByDate[date] }))
     .reverse()
     .slice(-7);

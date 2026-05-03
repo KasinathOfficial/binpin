@@ -105,7 +105,7 @@ function MapController({
     zoomstart: () => setShouldFollow(false),
     movestart: (e) => {
       // Only disable follow if it's a real user movement, not a flyTo
-      if (e.hard) return; 
+      if ((e as any).hard) return; 
     }
   });
 
@@ -150,14 +150,6 @@ export default function AppMap({
     }
   }, [userLocation]);
 
-  const createClusterCustomIcon = function (cluster: any) {
-    const count = cluster.getChildCount();
-    return L.divIcon({
-      html: `<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#28c76f,#1E8A4A);border:3px solid #fff;box-shadow:0 0 0 2px #1E8A4A,0 4px 12px rgba(30,138,74,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:900;font-size:13px;color:#fff;font-family:inherit;transition:transform 0.2s;">${count}</div>`,
-      className: 'bg-transparent border-none',
-      iconSize: L.point(44, 44, true),
-    });
-  };
 
   return (
     <div className="w-full h-full z-0 relative">

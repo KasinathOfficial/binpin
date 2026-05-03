@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Camera, MapPin, ChevronRight, Check } from 'lucide-react';
 import type { BinType, Bin } from '../lib/appwrite';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -39,7 +39,7 @@ function MapClicker({ onLocationSelect }: { onLocationSelect: (lat: number, lng:
 export default function AddBinSheet({ onClose, userLocation, onSubmit, initialData }: AddBinSheetProps) {
   const [step, setStep] = useState(1);
   const [selectedLoc, setSelectedLoc] = useState<[number, number] | null>(
-    initialData?.lat ? [initialData.lat, initialData.lng] : null
+    (initialData?.lat !== undefined && initialData?.lng !== undefined) ? [initialData.lat, initialData.lng] : null
   );
   const [cityData, setCityData] = useState<string>(initialData?.city || 'Unknown City');
   const [isGeocoding, setIsGeocoding] = useState(false);

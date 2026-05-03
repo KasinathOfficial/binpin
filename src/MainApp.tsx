@@ -17,7 +17,7 @@ import { databases, storage, client, ID } from './lib/appwrite';
 import type { Bin, BinRequest } from './lib/appwrite';
 import { Query } from 'appwrite';
 import { getDistance, formatDistance } from './lib/geo';
-import { addUpvotedBin, addUpvotedRequest } from './lib/votes';
+import { addUpvotedRequest } from './lib/votes';
 import { compressImage } from './lib/image';
 import { Loader2 } from 'lucide-react';
 
