@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { account } from '../lib/appwrite';
-import { Shield, Lock, User, CheckCircle2 } from 'lucide-react';
+import { Shield, KeyRound, CheckCircle2 } from 'lucide-react';
+import * as OTPAuth from 'otpauth';
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [isRobot, setIsRobot] = useState(true);
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [captchaChallenge, setCaptchaChallenge] = useState({ a: 0, b: 0 });
@@ -34,22 +34,30 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      if (email.includes('@')) {
-        await account.createEmailPasswordSession(email, password);
-        sessionStorage.setItem('admin_auth', 'true');
-        navigate('/admin');
-        return;
-      }
+      const secret = import.meta.env.VITE_TOTP_SECRET || 'BINPINSECURITY22';
       
-      const adminPass = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-      if (password === adminPass) {
+      const totp = new OTPAuth.TOTP({
+        issuer: 'BinPin',
+        label: 'Admin',
+        algorithm: 'SHA1',
+        digits: 6,
+        period: 30,
+        secret: secret
+      });
+
+      const delta = totp.validate({
+        token: otpCode.replace(/\s/g, ''),
+        window: 1
+      });
+
+      if (delta !== null) {
         sessionStorage.setItem('admin_auth', 'true');
         navigate('/admin');
       } else {
-        setError('The password you entered is incorrect.');
+        setError('Invalid authenticator code. Please check your app.');
       }
     } catch (err: any) {
-      setError(err.message || 'Access denied. Please check your credentials.');
+      setError('Verification error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -71,33 +79,22 @@ export default function AdminLogin() {
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/50 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Identifier</label>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Authenticator Code</label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <input 
                   type="text" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Username or Email"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-sm"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="000 000"
+                  maxLength={7}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-sm tracking-[0.2em] font-mono"
                   required
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Security Key</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 transition-all text-sm"
-                  required
-                />
-              </div>
+              <p className="text-[10px] text-slate-400 mt-2 italic">Enter the 6-digit code from your Google Authenticator app.</p>
             </div>
 
             {/* Simple Verification Gate */}

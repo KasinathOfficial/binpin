@@ -134,8 +134,12 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit, initialDa
               </div>
               
               <div className="flex-1 min-h-[300px] w-full rounded-2xl overflow-hidden shadow-inner border border-border relative">
-                <MapContainer center={centerLoc} zoom={18} zoomControl={false} className="w-full h-full" dragging={true}>
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                <MapContainer center={centerLoc} zoom={18} maxZoom={22} zoomControl={false} className="w-full h-full" dragging={true}>
+                  <TileLayer 
+                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" 
+                    maxZoom={22}
+                    maxNativeZoom={19}
+                  />
                   <MapClicker onLocationSelect={(lat, lng) => setSelectedLoc([lat, lng])} />
                   {(selectedLoc || userLocation) && <Marker position={(selectedLoc || userLocation) as [number, number]} icon={addIcon} />}
                 </MapContainer>

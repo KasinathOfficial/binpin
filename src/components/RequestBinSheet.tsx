@@ -94,8 +94,12 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
           <div className="flex flex-col animate-slide-up space-y-4">
             <h3 className="text-sm font-bold text-foreground">1. Select Request Location</h3>
             <div className="h-[300px] w-full rounded-xl overflow-hidden shadow-inner border border-border relative">
-              <MapContainer center={centerLoc} zoom={16} zoomControl={false} className="w-full h-full" dragging={true}>
-                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+              <MapContainer center={centerLoc} zoom={16} maxZoom={22} zoomControl={false} className="w-full h-full" dragging={true}>
+                <TileLayer 
+                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" 
+                  maxZoom={22}
+                  maxNativeZoom={19}
+                />
                 <MapClicker onLocationSelect={(lat, lng) => setSelectedLoc([lat, lng])} />
                 {(selectedLoc || userLocation) && <Marker position={(selectedLoc || userLocation) as [number, number]} icon={requestIcon} />}
               </MapContainer>

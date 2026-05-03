@@ -156,6 +156,7 @@ export default function AppMap({
       <MapContainer 
         center={center} 
         zoom={userLocation ? 15 : 5} 
+        maxZoom={22}
         zoomControl={false}
         className="w-full h-full"
         dragging={interactive}
@@ -168,6 +169,8 @@ export default function AppMap({
             ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
             : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
           }
+          maxZoom={22}
+          maxNativeZoom={19}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
         
