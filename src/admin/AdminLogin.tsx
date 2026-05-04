@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { account } from '../lib/appwrite';
 import { Shield, KeyRound, CheckCircle2 } from 'lucide-react';
 import * as OTPAuth from 'otpauth';
 
