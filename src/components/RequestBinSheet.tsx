@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { MapPin, ImagePlus, Check, AlertCircle } from 'lucide-react';
+import { MapPin, Check, AlertCircle, Camera, ImageIcon } from 'lucide-react';
+import CameraCapture from './CameraCapture';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import BottomSheet from './ui/BottomSheet';
@@ -43,6 +44,7 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<1 | 2>(1); // 1: Map, 2: Details
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reverseGeocode = async (lat: number, lng: number) => {
@@ -158,34 +160,56 @@ export default function RequestBinSheet({ onClose, userLocation, onSubmit }: Req
             <div>
               <label className="block text-sm font-bold text-foreground mb-2">Proof Photo (Recommended)</label>
               <div className="w-full relative">
-                <input type="file" accept="image/jpeg, image/png" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
-                {photoPreview ? (
+                {showCamera ? (
+                  <CameraCapture 
+                    onCapture={(file) => {
+                      setPhotoFile(file);
+                      const reader = new FileReader();
+                      reader.onloadend = () => setPhotoPreview(reader.result as string);
+                      reader.readAsDataURL(file);
+                      setShowCamera(false);
+                    }}
+                    onCancel={() => setShowCamera(false)}
+                  />
+                ) : photoPreview ? (
                   <div className="w-full h-32 rounded-lg overflow-hidden border border-border relative">
                     <img src={photoPreview} alt="Preview" className="w-full h-full object-contain bg-black/5" />
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1 rounded-md text-xs font-semibold backdrop-blur-md">
-                      Change
+                    <button onClick={() => setShowCamera(true)} className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1 rounded-md text-xs font-semibold backdrop-blur-md flex items-center gap-1">
+                      <Camera className="w-3 h-3" /> Change
                     </button>
                   </div>
                 ) : (
-                  <div onClick={() => fileInputRef.current?.click()} className="w-full h-24 border-2 border-dashed border-border hover:border-orange/50 bg-surface-raised hover:bg-orange/5 rounded-lg flex flex-col items-center justify-center text-foreground-muted cursor-pointer transition-colors active:scale-95">
-                    <ImagePlus className="w-6 h-6 mb-1" />
-                    <span className="text-sm font-medium">Tap to add photo</span>
+                  <div className="flex flex-col gap-2">
+                    <div onClick={() => setShowCamera(true)} className="w-full h-24 border-2 border-dashed border-orange/30 hover:border-orange/50 bg-orange/5 hover:bg-orange/10 rounded-lg flex flex-col items-center justify-center text-orange cursor-pointer transition-colors active:scale-95 shadow-sm">
+                      <Camera className="w-6 h-6 mb-1" />
+                      <span className="text-sm font-bold">Instant Camera</span>
+                    </div>
+                    <div onClick={() => fileInputRef.current?.click()} className="w-full h-12 border border-border bg-white hover:bg-surface rounded-lg flex items-center justify-center gap-2 text-foreground-muted cursor-pointer transition-colors active:scale-95">
+                      <ImageIcon className="w-4 h-4" />
+                      <span className="text-xs font-bold">Upload from Gallery</span>
+                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            <button 
-              onClick={async () => {
-                setIsSubmitting(true);
-                await onSubmit({ lat: selectedLoc?.[0], lng: selectedLoc?.[1], address, description, photoFile, city: cityData });
-                // isSubmitting will stay true until sheet is unmounted
-              }}
-              disabled={isSubmitting || !description.trim() || !cityData || !address.trim()}
-              className="w-full h-12 bg-orange hover:bg-orange/90 disabled:opacity-50 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-              {isSubmitting ? 'Submitting...' : 'Create Public Request'} <Check className="w-5 h-5 -mr-1" />
-            </button>
+            <div className="flex gap-3">
+              <button onClick={() => setStep(1)} className="w-1/3 h-12 bg-surface-raised text-foreground font-bold rounded-lg border border-border active:scale-95 transition-all">
+                Back
+              </button>
+              <button 
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  await onSubmit({ lat: selectedLoc?.[0], lng: selectedLoc?.[1], address, description, photoFile, city: cityData });
+                }}
+                disabled={isSubmitting || !description.trim() || !cityData || !address.trim()}
+                className="flex-1 h-12 bg-orange hover:bg-orange/90 disabled:opacity-50 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 transition-all active:scale-95"
+              >
+                {isSubmitting ? 'Submitting...' : 'Create Public Request'} <Check className="w-5 h-5 -mr-1" />
+              </button>
+            </div>
+
           </div>
         )}
       </div>

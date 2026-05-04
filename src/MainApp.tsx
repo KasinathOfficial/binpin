@@ -13,6 +13,7 @@ import RequestBinSheet from './components/RequestBinSheet';
 import RequestDetailSheet from './components/RequestDetailSheet';
 import InstallBanner from './components/InstallBanner';
 import SuccessCelebration from './components/SuccessCelebration';
+import OnboardingSheet from './components/OnboardingSheet';
 import { databases, storage, client, ID } from './lib/appwrite';
 import type { Bin, BinRequest } from './lib/appwrite';
 import { Query } from 'appwrite';
@@ -95,7 +96,17 @@ export default function MainApp() {
   const [isBinList, setIsBinList] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successType, setSuccessType] = useState<'add' | 'update' | 'request'>('add');
+  const [isHelp, setIsHelp] = useState(false);
   const [isGlobalLoading, setIsGlobalLoading] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+
+  useEffect(() => {
+    const hasVisited = localStorage.getItem('binpin_visited');
+    if (!hasVisited) {
+      setIsNewUser(true);
+    }
+  }, []);
+
 
   useEffect(() => {
     fetchBins();
@@ -160,6 +171,33 @@ export default function MainApp() {
       return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
+
+
+  // Auto-show Help/Onboarding if permissions are missing
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const locStatus = await navigator.permissions.query({ name: 'geolocation' });
+        if (locStatus.state !== 'granted') {
+          const hasShown = sessionStorage.getItem('binpin_help_shown');
+          if (!hasShown) {
+            setIsHelp(true);
+            sessionStorage.setItem('binpin_help_shown', 'true');
+          }
+        }
+      } catch (e) {
+        const hasShown = sessionStorage.getItem('binpin_help_shown');
+        if (!hasShown) {
+          setIsHelp(true);
+          sessionStorage.setItem('binpin_help_shown', 'true');
+        }
+      }
+    };
+
+    if (!showSplash) {
+      checkOnboarding();
+    }
+  }, [showSplash]);
 
   const fetchRequests = async () => {
     if(!dbId || !reqsId) return;
@@ -244,6 +282,12 @@ export default function MainApp() {
             onAddClick={() => setIsAdding(true)}
             onRequestClick={() => setIsRequesting(true)}
             onMunicipalClick={() => navigate('/transparency')}
+            onHelpClick={() => {
+              setIsHelp(true);
+              setIsNewUser(false);
+              localStorage.setItem('binpin_visited', 'true');
+            }}
+            isNewUser={isNewUser}
           />
           
           <FloatingElements 
@@ -404,6 +448,8 @@ export default function MainApp() {
           )}
 
           {isSuccess && <SuccessCelebration type={successType} onClose={() => setIsSuccess(false)} />}
+          
+          {isHelp && <OnboardingSheet onClose={() => setIsHelp(false)} />}
           
           {isGlobalLoading && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center text-white">

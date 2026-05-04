@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Camera, MapPin, ChevronRight, Check } from 'lucide-react';
+import { Camera, MapPin, ChevronRight, Check, ImageIcon } from 'lucide-react';
+import CameraCapture from './CameraCapture';
 import type { BinType, Bin } from '../lib/appwrite';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -51,6 +52,7 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit, initialDa
   const [photoPreview, setPhotoPreview] = useState<string | null>(initialData?.photo_url || null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const types: { value: BinType; label: string; color: string }[] = [
@@ -203,22 +205,39 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit, initialDa
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[300px]">
-                <input type="file" accept="image/jpeg, image/png" capture="environment" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
-                
-                {photoPreview ? (
+                {showCamera ? (
+                  <CameraCapture 
+                    onCapture={(file) => {
+                      setPhotoFile(file);
+                      const reader = new FileReader();
+                      reader.onloadend = () => setPhotoPreview(reader.result as string);
+                      reader.readAsDataURL(file);
+                      setShowCamera(false);
+                    }}
+                    onCancel={() => setShowCamera(false)}
+                  />
+                ) : photoPreview ? (
                   <div className="relative w-full h-[300px] rounded-xl overflow-hidden shadow-medium border border-border">
                     <img src={photoPreview} alt="Preview" className="w-full h-full object-contain bg-black/5" />
-                    <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 backdrop-blur-md text-white rounded-full text-sm font-medium hover:bg-black/80 transition-colors shadow-lg active:scale-95">
-                      Retake Photo
+                    <button onClick={() => setShowCamera(true)} className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 backdrop-blur-md text-white rounded-full text-sm font-medium hover:bg-black/80 transition-colors shadow-lg active:scale-95 flex items-center gap-2">
+                      <Camera className="w-4 h-4" /> Retake Photo
                     </button>
                   </div>
                 ) : (
-                  <div onClick={() => fileInputRef.current?.click()} className="w-full h-[300px] border-2 border-dashed border-border hover:border-primary/50 bg-surface-raised hover:bg-primary/5 rounded-xl flex flex-col items-center justify-center text-foreground-muted transition-colors cursor-pointer group active:scale-95">
-                    <div className="w-16 h-16 bg-white rounded-full shadow-subtle flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Camera className="w-8 h-8 text-foreground-secondary" />
+                  <div className="w-full h-full flex flex-col gap-4">
+                    <div onClick={() => setShowCamera(true)} className="flex-1 border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 rounded-xl flex flex-col items-center justify-center text-primary transition-all cursor-pointer group active:scale-95 shadow-subtle">
+                      <div className="w-16 h-16 bg-white rounded-full shadow-subtle flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Camera className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-bold">Instant Camera</span>
+                      <span className="text-xs mt-1 opacity-70">Capture & process automatically</span>
                     </div>
-                    <span className="text-sm font-bold text-foreground">Tap to take photo</span>
-                    <span className="text-xs mt-1">Or upload from gallery</span>
+
+                    <div onClick={() => fileInputRef.current?.click()} className="h-16 border border-border bg-white hover:bg-surface rounded-xl flex items-center justify-center gap-3 text-foreground-muted cursor-pointer transition-colors active:scale-95">
+                      <ImageIcon className="w-5 h-5" />
+                      <span className="text-sm font-bold">Upload from Gallery</span>
+                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -262,24 +281,39 @@ export default function AddBinSheet({ onClose, userLocation, onSubmit, initialDa
             </button>
           )}
           {step === 2 && (
-            <button onClick={() => setStep(3)} className="w-full h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-medium flex items-center justify-center gap-2 active:scale-95 transition-all">
-              Continue <ChevronRight className="w-5 h-5 -mr-1" />
-            </button>
+            <div className="flex gap-3">
+              <button onClick={() => setStep(1)} className="w-1/3 h-[48px] bg-surface-raised text-foreground font-bold rounded-lg border border-border active:scale-95 transition-all">
+                Back
+              </button>
+              <button onClick={() => setStep(3)} className="flex-1 h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-medium flex items-center justify-center gap-2 active:scale-95 transition-all">
+                Continue <ChevronRight className="w-5 h-5 -mr-1" />
+              </button>
+            </div>
           )}
           {step === 3 && (
-            <button onClick={() => setStep(4)} disabled={!photoPreview} className="w-full h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 transition-all">
-              Attach Photo <Check className="w-5 h-5 -mr-1" />
-            </button>
+            <div className="flex gap-3">
+              <button onClick={() => setStep(2)} className="w-1/3 h-[48px] bg-surface-raised text-foreground font-bold rounded-lg border border-border active:scale-95 transition-all">
+                Back
+              </button>
+              <button onClick={() => setStep(4)} disabled={!photoPreview} className="flex-1 h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-medium flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 transition-all">
+                Attach Photo <Check className="w-5 h-5 -mr-1" />
+              </button>
+            </div>
           )}
           {step === 4 && (
             <>
-              <button 
-                onClick={handleSubmit} 
-                disabled={isSubmitting}
-                className="w-full h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 active:scale-95 transition-all mb-2 disabled:opacity-50"
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit Public Bin'}
-              </button>
+              <div className="flex gap-3 mb-2">
+                <button onClick={() => setStep(3)} className="w-1/3 h-[48px] bg-surface-raised text-foreground font-bold rounded-lg border border-border active:scale-95 transition-all">
+                  Back
+                </button>
+                <button 
+                  onClick={handleSubmit} 
+                  disabled={isSubmitting}
+                  className="flex-1 h-[48px] bg-primary hover:bg-primary/90 text-white font-bold rounded-lg shadow-strong flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Public Bin'}
+                </button>
+              </div>
               <p className="text-[11px] text-foreground-muted text-center font-medium">No login required. 100% anonymous.</p>
             </>
           )}

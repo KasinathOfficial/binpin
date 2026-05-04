@@ -1,4 +1,4 @@
-import { Search, MessageSquare, Moon, Sun, Plus, AlertCircle, Shield } from 'lucide-react';
+import { Search, MessageSquare, Moon, Sun, Plus, AlertCircle, Shield, HelpCircle } from 'lucide-react';
 
 interface TopBarProps {
   onSearch: (query: string) => void;
@@ -8,6 +8,8 @@ interface TopBarProps {
   onAddClick: () => void;
   onRequestClick: () => void;
   onMunicipalClick: () => void;
+  onHelpClick: () => void;
+  isNewUser?: boolean;
 }
 
 export default function TopBar({ 
@@ -17,7 +19,9 @@ export default function TopBar({
   onToggleTheme,
   onAddClick,
   onRequestClick,
-  onMunicipalClick
+  onMunicipalClick,
+  onHelpClick,
+  isNewUser
 }: TopBarProps) {
   return (
     <div className="absolute top-0 inset-x-0 z-[1001] p-3 pointer-events-none">
@@ -72,6 +76,22 @@ export default function TopBar({
           >
             <Shield className="w-3.5 h-3.5 text-blue" /> BOARD
           </button>
+          <div className="relative">
+            <button 
+              onClick={onHelpClick}
+              className="bg-white/95 backdrop-blur-md text-foreground w-10 h-10 rounded-full shadow-soft border border-border/50 flex items-center justify-center active:scale-95 transition-all hover:bg-surface ring-2 ring-white shrink-0"
+              title="Help & Permissions"
+            >
+              <HelpCircle className="w-4 h-4 text-primary" />
+            </button>
+            {isNewUser && (
+              <>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-ping" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border border-white" />
+              </>
+            )}
+          </div>
+
         </div>
       </div>
     </div>
